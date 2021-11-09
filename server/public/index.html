@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ChatJs</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .myMessage{
+            text-align: right;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app">
+        <form id="chat" @submit.prevent="submitMessage()" method="post">
+            <label for="">Usuario</label>
+            <input type="text" name="username" v-model="username" placeholder="digite seu usuario" />
+            <div class="messages">
+                <div class="message" v-for="mensagem in mensagens" :class="{'myMessage': socketId === mensagem.id}">
+                    <strong>{{mensagem.author}}</strong>: {{mensagem.message}}
+                </div>
+            </div>
+            <label for="">Mensagem</label>
+            <input type="text" name="message" v-model="message" placeholder="digite sua mensagem" />
+            <button type="submit">Enviar</button>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.3.1/socket.io.js"></script>
+
+    <script>
+        let socket = io('http://localhost:3000');
+          
+        const app = new Vue({
+            el: "#app",
+            data: function () {
+                return {
+                    mensagens: [],
+                    username: '',
+                    message: '',
+                    socketId: null
+                }
+            },
+            methods: {
+                addMensagem(mensagem) {
+                    this.mensagens.push(mensagem)
+                },
+                submitMessage() {
+                    if (this.username.length && this.message.length) {
+                        let messageObject = {
+                            author: this.username,
+                            message: this.message,
+                            id: socket.id
+                        }
+
+                        this.addMensagem(messageObject);
+
+                        socket.emit('sendMessage', messageObject);
+                        this.message = '';
+                    }
+                }
+            }
+        });
+
+        socket.on('connect', () => {
+            app.socketId = socket.id;
+        });
+
+        socket.on('receivedMessage', message => {
+            app.addMensagem(message);
+        });
+
+        socket.on('previousMessage', (messages) => {
+            for (message of messages) {
+                app.addMensagem(message);
+            }
+        })
+    </script>
+</body>
+
+</html>
